@@ -1,17 +1,35 @@
 from subprocess32 import PIPE, STDOUT, check_output, Popen
 import zipfile,fnmatch,os,shutil
-import xlsxwriter
+import xlwt
 import json
+import sys
 
+#check dir contains dir
+def checkDir(location):
+	for filename in os.listdir(location): 
+		if os.path.isdir(location +'/'+ filename):
+			return True
+	return False	
+
+#check files exists in location
+def checkFiles(data, location):
+	for filename in data:
+		if filename not in location:
+			return False
+	for filename in location:
+		if filename not in data:
+			return False		
+	return True
+			
 #edit grader notes
 def writeNotes(testnum, expectedOutput, output):
 	global notes
 	notes = notes + "fail test "
 	notes = notes + testnum
 	notes = notes + "\nexpected:\n"
-	notes = notes + repr(expectedOutput)
+	notes = notes + expectedOutput.encode('ascii','ignore').encode('string_escape')
 	notes = notes + "\ngot:\n"
-	notes = notes + repr(output)
+	notes = notes + output.encode('ascii','ignore').encode('string_escape')
 	notes = notes + "\n"
 
 #write grade to file
@@ -21,9 +39,9 @@ def writeToFile (i, groupNum, grade, notes):
 	worksheet.write(i, 2, notes)
 
 #run test case
-def case(myinput, expectedOutput, testnum, task, points):
+def case(myinput, expectedOutput, testnum, executable, points):
 	try: #try execute
-		stdout = Popen(['./task'+task+'.bin', 'f'], stdout=PIPE, stdin=PIPE, stderr=STDOUT).communicate(input=myinput, timeout=10)[0]
+		stdout = Popen(['./'+executable], stdout=PIPE, stdin=PIPE, stderr=STDOUT, universal_newlines=True).communicate(input=myinput, timeout=10)[0]
 	
 	except: #execute failed
 		writeNotes(testnum, expectedOutput, "TIMEOUT")
@@ -48,15 +66,15 @@ def test (groupNum, i, data):
 	global notes, sumGrades
 
 	try: #try compile
-		check_output(['bash','-c', "make"])
+		check_output(["make"])
 
 	except: #compile failed
-		writeToFile(i, groupNum, 0, "error compiling. you did not followed the orders! bad file names / bad syntax / including makefile / not a zip. YOUR GRADE IS 0")
-		return 0;
+		writeToFile(i, groupNum, 0, "error compiling. YOUR GRADE IS 0")
+		return "0 => compilation error";
 
 	grade = 0
 	for j in range(len(data)):
-		grade += case (data[j]["input"], data[j]["expectedOutput"], data[j]["testNum"], data[j]["task"], data[j]["points"]);
+		grade += case (data[j]["input"], data[j]["expectedOutput"], str(j+1), data[j]["executable"], data[j]["points"]);
 
 	#write to Excel
 	writeToFile(i,groupNum,grade,notes)
@@ -64,47 +82,70 @@ def test (groupNum, i, data):
 	sumGrades += grade
 	return grade;
 
-print "Please put student's Zips in 'zip' folder"
-print "Please put src files in 'src' folder"
-#get args
-arg1 = raw_input("Please enter JSON test file name: ")
-arg2 = raw_input("Please enter full uniqe file name that should be in student folder: ")
-
-#prepere Excel
-workbook = xlsxwriter.Workbook('grades.xlsx')
-worksheet = workbook.add_worksheet()
-worksheet.write('A1', 'Group ID')
-worksheet.write('B1', 'Grade')
-worksheet.write('C1', 'Grader Notes')
-
-#extract zips in "zip" folder
+#args
+testFile = sys.argv[1]
+outputFile = sys.argv[2]
 rootPath = "zip"
 srcPath = "src/"
-pattern = '*.zip'
-for root, dirs, files in os.walk(rootPath):
-    for filename in fnmatch.filter(files, pattern):
-        zipfile.ZipFile(os.path.join(root, filename)).extractall(os.path.join(root, os.path.splitext(filename)[0]))
 
 #open tests file
-with open(arg1+".json") as data_file:    
-	data = json.load(data_file)["tests"]
+with open(testFile+".json") as data_file:    
+	data = json.load(data_file)
+
+#check src files
+if not checkFiles(data["srcFiles"], os.listdir(srcPath)):
+	print "Please put required src files in 'src' folder!"
+	exit(1)
+
+#prepere Excel
+workbook = xlwt.Workbook()
+worksheet = workbook.add_sheet('grades')
+worksheet.write(0, 0, 'submittal_group_id')
+worksheet.write(0, 1, 'grade')
+worksheet.write(0, 2, 'grade_note')
+
+i=1 #student counter
+
+#give 0 to non zip files
+for root, dirs, files in os.walk(rootPath):
+    for filename in files:
+        if not filename.endswith(('.zip')):
+			writeToFile(i, filename[0:5], 0, "ERROR! you did not followed the orders! not a zip! YOUR GRADE IS 0")
+			print "Group num:",filename[0:5], "Grade: 0 => not zip"
+			i+=1
+
+#extract zips in "zip" folder
+for root, dirs, files in os.walk(rootPath):			
+	for filename in fnmatch.filter(files, '*.zip'):
+		zipfile.ZipFile(os.path.join(root, filename)).extractall(os.path.join(root, os.path.splitext(filename)[0]))
 
 #main loop
 print "-------------------------CALCULATING-------------------------"
-i=1
 notes = "" #global grader notes
-sumGrades = 0
-pattern = arg2 #uniqe file name that should be in student folder
+sumGrades = 0 #var for calc AVG
 for root, dirs, files in os.walk(rootPath):
-    for filename in fnmatch.filter(files, pattern):
-    	groupNum = os.path.join(root)[4:9] #get groupNum
-    	for filename in os.listdir(srcPath): #copy needed files to student's folder
+	cwd = os.getcwd() #save folder location
+	groupNum = os.path.join(root)[4:9] #get groupNum
+	if os.path.join(root)=="zip" or checkDir(os.path.join(root)): #not student folder
+		pass
+	elif not checkFiles(data["neededFiles"], os.listdir(os.path.join(root))): #bad structure of student folder
+		writeToFile(i, groupNum, 0, "ERROR! you did not followed the orders! bad file names / not all needed files in zip / too much files in zip. YOUR GRADE IS 0")
+		print "Group num:",groupNum, "Grade: 0 => bad files"
+		i+=1
+	else:
+		for filename in os.listdir(srcPath): #copy src files to student's folder
 			shutil.copy( srcPath + filename, os.path.join(root))
-    	cwd = os.getcwd() #save folder location
-    	os.chdir(os.path.join(root)) #change folder to student folder
-    	print "Group num:",groupNum, "Grade:", test(groupNum, i, data) #execute
-    	os.chdir(cwd) #return to previous folder
-    	i=i+1	
-workbook.close()
+		os.chdir(os.path.join(root)) #change folder to student folder
+		print "Group num:",groupNum, "Grade:", test(groupNum, i, data["tests"]) #execute
+		os.chdir(cwd) #return to previous folder
+		i+=1
+
+#delete all created folders
+for root, dirs, files in os.walk(rootPath):
+	if not os.path.join(root)=="zip":
+		shutil.rmtree(os.path.join(root))
+
+workbook.save(outputFile+'.xls')
 print "-------------------------EXCEL FILE READY-------------------------"
+print "TOTAL:", (i-1)
 print "AVG:", sumGrades/(i-1)
