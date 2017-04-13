@@ -33,60 +33,54 @@ def writeNotes(testnum, expectedOutput, output):
 	notes = notes + "\n"
 
 #write grade to file
-def writeToFile (i, groupNum, grade, notes):
-	worksheet.write(i, 0, groupNum)
-	worksheet.write(i, 1, grade)
-	worksheet.write(i, 2, notes)
+def writeToFile (groupNum, grade, graderNotes, debugMsg):
+	global i, notes, sumGrades
+	worksheet.write(i, 0, int(groupNum))
+	worksheet.write(i, 1, int(grade))
+	worksheet.write(i, 2, str(graderNotes))
+	print "Group num:",groupNum, "Grade:",grade, debugMsg
+	i+=1
+	notes = ""
+	sumGrades += grade
 
 #run test case
 def case(myinput, expectedOutput, testnum, executable, points):
 	try: #try execute
 		stdout = Popen(['./'+executable], stdout=PIPE, stdin=PIPE, stderr=STDOUT, universal_newlines=True).communicate(input=myinput, timeout=10)[0]
-	
 	except: #execute failed
 		writeNotes(testnum, expectedOutput, "TIMEOUT")
 		return 0
-
 	try: #try get stdout
 		out = stdout.decode()
-
 	except: #stdout fail
 		writeNotes(testnum, expectedOutput, "UnicodeDecodeError")
 		return 0
-
 	if stdout.decode() != expectedOutput: #wrong stdout
 		writeNotes(testnum, expectedOutput, out)
 		return 0
-
 	else: #All Clear
 		return points
 
 #main test func
-def test (groupNum, i, data):
+def test (groupNum, data):
 	global notes, sumGrades
-
 	try: #try compile
 		check_output(["make"])
-
 	except: #compile failed
-		writeToFile(i, groupNum, 0, "error compiling. YOUR GRADE IS 0")
-		return "0 => compilation error";
-
+		writeToFile(groupNum, 0, "error compiling. YOUR GRADE IS 0", "=> compilation error")
+		return
 	grade = 0
 	for j in range(len(data)):
 		grade += case (data[j]["input"], data[j]["expectedOutput"], str(j+1), data[j]["executable"], data[j]["points"]);
+	writeToFile(groupNum,grade,notes,"")
 
-	#write to Excel
-	writeToFile(i,groupNum,grade,notes)
-	notes = ""
-	sumGrades += grade
-	return grade;
-
-#args
+#args and globals
 testFile = sys.argv[1]
 outputFile = sys.argv[2]
 rootPath = "zip"
 srcPath = "src/"
+notes = "" #global grader notes
+sumGrades = 0 #var for calc AVG
 
 #open tests file
 with open(testFile+".json") as data_file:    
@@ -108,11 +102,9 @@ i=1 #student counter
 
 #give 0 to non zip files
 for root, dirs, files in os.walk(rootPath):
-    for filename in files:
-        if not filename.endswith(('.zip')):
-			writeToFile(i, filename[0:5], 0, "ERROR! you did not followed the orders! not a zip! YOUR GRADE IS 0")
-			print "Group num:",filename[0:5], "Grade: 0 => not zip"
-			i+=1
+	for filename in files:
+		if not filename.endswith(('.zip')):
+			writeToFile(filename[0:5], 0, "ERROR! you did not followed the orders! not a zip! YOUR GRADE IS 0", "=> not zip error")
 
 #extract zips in "zip" folder
 for root, dirs, files in os.walk(rootPath):			
@@ -121,24 +113,20 @@ for root, dirs, files in os.walk(rootPath):
 
 #main loop
 print "-------------------------CALCULATING-------------------------"
-notes = "" #global grader notes
-sumGrades = 0 #var for calc AVG
 for root, dirs, files in os.walk(rootPath):
 	cwd = os.getcwd() #save folder location
 	groupNum = os.path.join(root)[4:9] #get groupNum
 	if os.path.join(root)=="zip" or checkDir(os.path.join(root)): #not student folder
 		pass
 	elif not checkFiles(data["neededFiles"], os.listdir(os.path.join(root))): #bad structure of student folder
-		writeToFile(i, groupNum, 0, "ERROR! you did not followed the orders! bad file names / not all needed files in zip / too much files in zip. YOUR GRADE IS 0")
-		print "Group num:",groupNum, "Grade: 0 => bad files"
-		i+=1
+		writeToFile(groupNum, 0, "ERROR! you did not followed the orders! bad file names / not all needed files in zip / too much files in zip. YOUR GRADE IS 0", "=> folder structure error")
 	else:
 		for filename in os.listdir(srcPath): #copy src files to student's folder
 			shutil.copy( srcPath + filename, os.path.join(root))
+
 		os.chdir(os.path.join(root)) #change folder to student folder
-		print "Group num:",groupNum, "Grade:", test(groupNum, i, data["tests"]) #execute
+		test(groupNum, data["tests"]) #execute
 		os.chdir(cwd) #return to previous folder
-		i+=1
 
 #delete all created folders
 for root, dirs, files in os.walk(rootPath):
