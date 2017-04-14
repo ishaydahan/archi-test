@@ -1,0 +1,16 @@
+{
+ "neededFiles":["myasm.s"],
+ "srcFiles":["Makefile", "main.c"],
+ "tests":[
+         {"executable":"myexe.out","points":10,"input":"42: heLL() WorLd!\n", "expectedOutput":"42: HELL<> WORLD!\n9\n"},
+         {"executable":"myexe.out","points":10,"input":"\n", "expectedOutput":"\n1\n"},
+         {"executable":"myexe.out","points":10,"input":"qwertyuiopasdfghjklzxcvbnm\n", "expectedOutput":"QWERTYUIOPASDFGHJKLZXCVBNM\n1\n"},
+         {"executable":"myexe.out","points":10,"input":"QWERTYUIOPASDFGHJKLZXCVBNM\n", "expectedOutput":"QWERTYUIOPASDFGHJKLZXCVBNM\n1\n"},
+         {"executable":"myexe.out","points":10,"input":" `~;!@#$%^&*-_+=/,.?><\"\\:{}[]\n", "expectedOutput":" `~;!@#$%^&*-_+=/,.?><\"\\:{}[]\n30\n"},
+         {"executable":"myexe.out","points":10,"input":"()\n", "expectedOutput":"<>\n3\n"},
+         {"executable":"myexe.out","points":10,"input":"qWeRtYuIoPaSdFgHjKlZxCvBnM\n", "expectedOutput":"QWERTYUIOPASDFGHJKLZXCVBNM\n1\n"},
+         {"executable":"myexe.out","points":10,"input":" `~;!@#$%^&*-_+=/,.?><\"\\:{}[]()()\n", "expectedOutput":" `~;!@#$%^&*-_+=/,.?><\"\\:{}[]<><>\n34\n"},
+         {"executable":"myexe.out","points":10,"input":"0123456789\n", "expectedOutput":"0123456789\n11\n"},
+         {"executable":"myexe.out","points":10,"input":"1qA*(\n", "expectedOutput":"1QA*<\n4\n"}
+        ]
+}
