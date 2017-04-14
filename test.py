@@ -76,6 +76,7 @@ def writeNotes(testnum, expectedOutput, output):
 #write grade to file
 def writeToFile (groupNum, grade, graderNotes, debugMsg):
 	global i, notes, sumGrades
+	graderNotes = graderNotes + "YOUR GRADE IS: " + str(grade)
 	worksheet.write(i, 0, int(groupNum))
 	worksheet.write(i, 1, int(grade))
 	worksheet.write(i, 2, str(graderNotes))
@@ -116,7 +117,10 @@ def test (groupNum, data):
 	writeToFile(groupNum,grade,notes,"")
 
 def getGroupNum(string):
-	return string[string.rindex('A')-5:string.rindex('A')]
+	num = string.rindex('A')
+	if num > 20:
+		num = string[0:20].rindex('A')
+	return string[num-5:num]
 #-------------------------------------------------------------------------------------------------------------------------
 if len(sys.argv)!= 5:
 	print "Please enter: python2 <filename.py> <input-filename> <src-folder> <zip-file/zips-folder> <output-filename>"

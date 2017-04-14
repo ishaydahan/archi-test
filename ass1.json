@@ -1,1 +1,26 @@
-CONFIDENTIAL
+{
+ "neededFiles":["task1.s", "task2.s", "main2.c"],
+ "srcFiles":["Makefile", "main1.c"],
+ "tests":[
+         {"executable":"task1.bin","points":5,"input":"@@@@@@@@", "expectedOutput":"@@@@@@@@"},
+         {"executable":"task1.bin","points":5,"input":"@@@@@@@@", "expectedOutput":"@@@@@@@@"},
+         {"executable":"task1.bin","points":5,"input":"@@@@@@@@", "expectedOutput":"@@@@@@@@"},
+         {"executable":"task1.bin","points":5,"input":"@@@@@@@@", "expectedOutput":"@@@@@@@@"},
+         {"executable":"task1.bin","points":5,"input":"@@@@@@@@", "expectedOutput":"@@@@@@@@"},
+         {"executable":"task1.bin","points":5,"input":"@@@@@@@@", "expectedOutput":"@@@@@@@@"},
+         {"executable":"task1.bin","points":5,"input":"@@@@@@@@", "expectedOutput":"@@@@@@@@"},
+         {"executable":"task1.bin","points":5,"input":"@@@@@@@@", "expectedOutput":"@@@@@@@@"},
+         {"executable":"task1.bin","points":5,"input":"@@@@@@@@", "expectedOutput":"@@@@@@@@"},
+         {"executable":"task1.bin","points":5,"input":"@@@@@@@@", "expectedOutput":"@@@@@@@@"},
+         {"executable":"task2.bin","points":5,"input":"@@@@@@@@", "expectedOutput":"@@@@@@@@"},
+         {"executable":"task2.bin","points":5,"input":"@@@@@@@@", "expectedOutput":"@@@@@@@@"},
+         {"executable":"task2.bin","points":5,"input":"@@@@@@@@", "expectedOutput":"@@@@@@@@"},
+         {"executable":"task2.bin","points":5,"input":"@@@@@@@@", "expectedOutput":"@@@@@@@@"},
+         {"executable":"task2.bin","points":5,"input":"@@@@@@@@", "expectedOutput":"@@@@@@@@"},
+         {"executable":"task2.bin","points":5,"input":"@@@@@@@@", "expectedOutput":"@@@@@@@@"},
+         {"executable":"task2.bin","points":5,"input":"@@@@@@@@", "expectedOutput":"@@@@@@@@"},
+         {"executable":"task2.bin","points":5,"input":"@@@@@@@@", "expectedOutput":"@@@@@@@@"},
+         {"executable":"task2.bin","points":5,"input":"@@@@@@@@", "expectedOutput":"@@@@@@@@"},
+         {"executable":"task2.bin","points":5,"input":"@@@@@@@@", "expectedOutput":"@@@@@@@@"}
+        ]
+}
