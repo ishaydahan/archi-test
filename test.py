@@ -1,4 +1,5 @@
 from subprocess32 import PIPE, STDOUT, check_output, Popen
+from decimal import Decimal
 import zipfile,fnmatch,os,shutil
 import xlwt
 import json
@@ -24,7 +25,7 @@ def extractZips(path):
 	for root, dirs, files in os.walk(path):
 		for filename in files:
 			if not filename.endswith(('.zip')):
-				writeToFile(filename[0:5], 0, "ERROR! you did not followed the orders! not a zip! YOUR GRADE IS 0", "=> not zip error")
+				writeToFile(filename[0:5], 0, "ERROR! you did not followed the orders! not a zip.\n", "=> not zip error")
 	for root, dirs, files in os.walk(path):			
 		for filename in fnmatch.filter(files, '*.zip'):
 			zipfile.ZipFile(os.path.join(root, filename)).extractall(os.path.join(root, os.path.splitext(filename)[0]))
@@ -63,42 +64,51 @@ def checkFiles(data, location):
 	return True
 
 #edit grader notes
-def writeNotes(testnum, expectedOutput, output):
+def writeNotes(testnum, myinput, expectedOutput, output):
 	global notes
 	notes = notes + "fail test "
 	notes = notes + testnum
+	notes = notes + "\nfor input:\n"
+	notes = notes + myinput.encode('ascii','ignore').encode('string_escape')
 	notes = notes + "\nexpected:\n"
 	notes = notes + expectedOutput.encode('ascii','ignore').encode('string_escape')
 	notes = notes + "\ngot:\n"
 	notes = notes + output.encode('ascii','ignore').encode('string_escape')
-	notes = notes + "\n"
+	notes = notes + "\n\n"
 
 #write grade to file
 def writeToFile (groupNum, grade, graderNotes, debugMsg):
-	global i, notes, sumGrades
+	global i, notes, sumGrades, lastGroupNum
+	if lastGroupNum==groupNum:
+		notes = ""
+		return	
 	graderNotes = graderNotes + "YOUR GRADE IS: " + str(grade)
 	worksheet.write(i, 0, int(groupNum))
 	worksheet.write(i, 1, int(grade))
 	worksheet.write(i, 2, str(graderNotes))
-	print "Group num:",groupNum, "Grade:",grade, debugMsg
+	if debugMsg!="":
+		print "Group num:",groupNum, "Grade:",grade, debugMsg
 	i+=1
 	notes = ""
 	sumGrades += grade
+	lastGroupNum = groupNum
 
 #run test case
 def case(myinput, expectedOutput, testnum, executable, points):
 	try: #try execute
-		stdout = Popen(['./'+executable], stdout=PIPE, stdin=PIPE, stderr=STDOUT, universal_newlines=True).communicate(input=myinput, timeout=10)[0]
+		p = Popen(['./'+executable], stdout=PIPE, stdin=PIPE, stderr=STDOUT, universal_newlines=True)
+		stdout = p.communicate(input=myinput, timeout=10)[0]
 	except: #execute failed
-		writeNotes(testnum, expectedOutput, "TIMEOUT")
+		writeNotes(testnum, myinput, expectedOutput, "TIMEOUT")
+		p.kill()
 		return 0
 	try: #try get stdout
 		out = stdout.decode()
 	except: #stdout fail
-		writeNotes(testnum, expectedOutput, "UnicodeDecodeError")
+		writeNotes(testnum, myinput, expectedOutput, "UnicodeDecodeError")
 		return 0
 	if stdout.decode() != expectedOutput: #wrong stdout
-		writeNotes(testnum, expectedOutput, out)
+		writeNotes(testnum, myinput, expectedOutput, out)
 		return 0
 	else: #All Clear
 		return points
@@ -109,7 +119,7 @@ def test (groupNum, data):
 	try: #try compile
 		check_output(["make"])
 	except: #compile failed
-		writeToFile(groupNum, 0, "error compiling. YOUR GRADE IS 0", "=> compilation error")
+		writeToFile(groupNum, 0, "ERROR! your files didnt compiled.\n", "=> compilation error")
 		return
 	grade = 0
 	for j in range(len(data)):
@@ -133,6 +143,7 @@ rootPath = sys.argv[3]
 outputFile = sys.argv[4]
 notes = "" #global grader notes
 sumGrades = 0 #var for calc AVG
+lastGroupNum = -1
 i=1 #student counter
 
 #prepere Excel
@@ -153,7 +164,7 @@ for root, dirs, files in os.walk(path):
 	if checkDir(os.path.join(root)): #not student folder
 		pass
 	elif not checkFiles(data["neededFiles"], os.listdir(os.path.join(root))): #bad structure of student folder
-		writeToFile(getGroupNum(os.path.join(root)), 0, "ERROR! you did not followed the orders! bad file names / not all needed files in zip / too much files in zip. YOUR GRADE IS 0", "=> folder structure error")
+		writeToFile(getGroupNum(os.path.join(root)), 0, "ERROR! you did not followed the orders! bad file names / not all needed files in zip / too much files in zip.\n", "=> folder structure error")
 		shutil.rmtree(os.path.join(root))
 	else:
 		for filename in os.listdir(srcPath): #copy src files to student's folder
@@ -169,4 +180,4 @@ if "." in rootPath:
 workbook.save(outputFile+'.xls')
 print "-------------------------EXCEL FILE READY-------------------------"
 print "TOTAL:", (i-1)
-print "AVG:", sumGrades/(i-1)
+print "AVG:", "{0:0.5f}".format(sumGrades/float((i-1)))
