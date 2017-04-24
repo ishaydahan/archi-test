@@ -22,9 +22,10 @@ def checkSrc(data, srcPath):
 		exit(1)		
 
 def extractZips(path):
+	global student
 	for root, dirs, files in os.walk(path):
 		for filename in files:
-			if not filename.endswith(('.zip')):
+			if student in filename and not filename.endswith(('.zip')):
 				writeToFile(filename[0:5], 0, "ERROR! you did not followed the orders! not a zip.\n", "=> not zip error")
 	for root, dirs, files in os.walk(path):			
 		for filename in fnmatch.filter(files, '*.zip'):
@@ -78,15 +79,17 @@ def writeNotes(testnum, myinput, expectedOutput, output):
 
 #write grade to file
 def writeToFile (groupNum, grade, graderNotes, debugMsg):
-	global i, notes, sumGrades, lastGroupNum
+	global i, notes, sumGrades, lastGroupNum, frontalCheck
 	if lastGroupNum==groupNum:
 		notes = ""
-		return	
+		return
 	graderNotes = graderNotes + "YOUR GRADE IS: " + str(grade)
-	worksheet.write(i, 0, int(groupNum))
-	worksheet.write(i, 1, int(grade))
-	worksheet.write(i, 2, str(graderNotes))
-	if debugMsg!="":
+	if frontalCheck:
+		print "Group num:",groupNum, "\n\n", str(graderNotes)
+	else:	
+		worksheet.write(i, 0, int(groupNum))
+		worksheet.write(i, 1, int(grade))
+		worksheet.write(i, 2, str(graderNotes))
 		print "Group num:",groupNum, "Grade:",grade, debugMsg
 	i+=1
 	notes = ""
@@ -132,9 +135,17 @@ def getGroupNum(string):
 		num = string[0:20].rindex('A')
 	return string[num-5:num]
 #-------------------------------------------------------------------------------------------------------------------------
-if len(sys.argv)!= 5:
+student = ""
+frontalCheck = False
+
+if len(sys.argv)== 6:
+	frontalCheck = True;
+	student = sys.argv[5]
+elif len(sys.argv)!= 5:
 	print "Please enter: python2 <filename.py> <input-filename> <src-folder> <zip-file/zips-folder> <output-filename>"
 	exit (1)
+else:
+	pass
 
 #args and globals
 testFile = sys.argv[1]
@@ -156,17 +167,18 @@ worksheet.write(0, 2, 'grade_note')
 path = checkZip(rootPath)
 data = checkInput(testFile)
 checkSrc(data, srcPath)
-
+testCases = open(testFile+".txt","wb")
+Popen(["python2", "cases.py", testFile], stdout=testCases)
 #main loop
 print "-------------------------CALCULATING-------------------------"
 for root, dirs, files in os.walk(path):
 	cwd = os.getcwd() #save folder location
 	if checkDir(os.path.join(root)): #not student folder
 		pass
-	elif not checkFiles(data["neededFiles"], os.listdir(os.path.join(root))): #bad structure of student folder
+	elif not checkFiles(data["neededFiles"], os.listdir(os.path.join(root))) and student in os.path.join(root): #bad structure of student folder
 		writeToFile(getGroupNum(os.path.join(root)), 0, "ERROR! you did not followed the orders! bad file names / not all needed files in zip / too much files in zip.\n", "=> folder structure error")
 		shutil.rmtree(os.path.join(root))
-	else:
+	elif student in os.path.join(root):
 		for filename in os.listdir(srcPath): #copy src files to student's folder
 			shutil.copy( srcPath + filename, os.path.join(root))
 		os.chdir(os.path.join(root)) #change folder to student folder
@@ -178,6 +190,6 @@ if "." in rootPath:
 	shutil.rmtree(path)
 
 workbook.save(outputFile+'.xls')
-print "-------------------------EXCEL FILE READY-------------------------"
+print "-------------------------FINISHED-------------------------"
 print "TOTAL:", (i-1)
 print "AVG:", "{0:0.5f}".format(sumGrades/float((i-1)))
